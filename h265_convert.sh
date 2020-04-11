@@ -18,13 +18,13 @@ height=$(~/Apps/ffmpeg/ffprobe -loglevel error -select_streams v:0 -show_entries
 
 if [ "$height" -lt 500 ]; then
     if [ "$sharpvar" == "y" ]; then
-        ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -vf unsharp -c:v libx265 -preset fast -x265-params crf="$crflowvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
+        ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -vf unsharp -c:v libx265 -x265-params crf="$crflowvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
     else
-        ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -preset fast -x265-params crf="$crflowvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
+        ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -x265-params crf="$crflowvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
     fi
 elif [ "$height" -gt 999 ]; then
-    ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -preset fast -x265-params crf="$crfhdvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
+    ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -x265-params crf="$crfhdvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
 else
-    ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -preset fast -x265-params crf="$crfhighvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
+    ~/Apps/ffmpeg/ffmpeg -i "$f" -map 0 -c copy -c:v libx265 -x265-params crf="$crfhighvar" -c:a libopus -b:a "$((2 * $abr))"k -ac 2 -max_muxing_queue_size 99999 "${f%.*}_micro.mkv"
 fi; done
 
