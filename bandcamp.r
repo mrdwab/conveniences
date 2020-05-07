@@ -39,6 +39,7 @@ if (file.exists(sprintf("%s.csv", rootFile))) {
   albums <- sort(albums)
   check <- startsWith(albums, "/")
   if (any(check)) albums[check] <- sprintf("%s%s", sub("/music.*$", "", opt$URL), albums[check])
+  albums <- sub("/music/", "/", albums)
   albums <- albums[!grepl("/track/", albums)]
   
   bookkeeping <- data.table(album = albums, status = FALSE)
@@ -86,8 +87,10 @@ lapply(albums[!bookkeeping$status], function(x) {
       Sys.sleep(3)
       for (i in seq_along(files)) {
         pb$tick(1)
-        system(sprintf("youtube-dl --playlist-items %s %s", i, x), 
-               ignore.stdout = TRUE, ignore.stderr = TRUE, wait = TRUE)
+        if (!file.exists(files[i])) {
+          system(sprintf("youtube-dl --playlist-items %s %s", i, x), 
+                 ignore.stdout = TRUE, ignore.stderr = TRUE, wait = TRUE)
+        }
         Sys.sleep(0.1)
       }
     }
@@ -106,7 +109,7 @@ lapply(albums[!bookkeeping$status], function(x) {
     if (length(metadata) == 1L) metadata <- paste0(metadata, "\n")
     metadata <- sub("^([^;]+;[^;]+).*", "\\1", x = metadata)
     metadata <- metadata[nzchar(metadata)]
-    metadata <- fread(text = metadata)
+    metadata <- fread(text = metadata, header = FALSE, sep = ";")
     setnames(metadata, c("V1", "V2"), c("track_number", "track_title"))
     metadata[, album := album_artist[1]][, album_artist := album_artist[2]][]
     
