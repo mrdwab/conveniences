@@ -5,6 +5,7 @@ suppressMessages(library(glue))
 suppressMessages(library(rvest))
 suppressMessages(library(data.table))
 suppressMessages(library(stringi))
+suppressMessages(library(progress))
 options(useFancyQuotes = FALSE)
 
 doc <- "Usage: bandcamp.r [URL] [-h] [--typ TYP]
@@ -21,6 +22,7 @@ gluefun <- function(message, color = "red") {
 setwd("~/Downloads/_Audio_To_Convert/")
 rootURL <- opt$URL
 rootFile <- gsub("https://", "", rootURL)
+rootFile <- gsub("/music.*$", "", rootFile)
 
 if (file.exists(sprintf("%s.csv", rootFile))) {
   bookkeeping <- fread(file = sprintf("%s.csv", rootFile))
@@ -36,7 +38,7 @@ if (file.exists(sprintf("%s.csv", rootFile))) {
   
   albums <- sort(albums)
   check <- startsWith(albums, "/")
-  if (any(check)) albums[check] <- sprintf("%s%s", sub("/music/", "", opt$URL), albums[check])
+  if (any(check)) albums[check] <- sprintf("%s%s", sub("/music.*$", "", opt$URL), albums[check])
   albums <- albums[!grepl("/track/", albums)]
   
   bookkeeping <- data.table(album = albums, status = FALSE)
@@ -44,39 +46,53 @@ if (file.exists(sprintf("%s.csv", rootFile))) {
 }
 
 lapply(albums[!bookkeeping$status], function(x) {
-  ## Create folder for the music
-  folder <- gsub("https://(*.*)\\.bandcamp*.*/(.*)$", "\\1_-_\\2", x)
-  gluefun(message = sprintf("\n\nCreating folder %s\n", folder), color = "red")
-  if (!dir.exists(folder)) dir.create(folder)
-  setwd(folder)
-  
-  ## Scrape the track list
-  gluefun(message = "Scraping track details", color = "yellow")
-  page <- read_html(x)
-  page %>% 
-    html_nodes("table.track_list") %>% 
-    html_nodes("tr") %>% 
-    html_text() %>%
-    trimws() %>%
-    gsub("\n+\\s+", ";", x = .) %>%
-    sub("^([^;]+;[^;]+).*", "\\1", x = .) %>%
-    sub("\\.", "", x = .) %>%
-    writeLines(con = sprintf("%s.ssv", folder))
-  
-  ## Scrape the artist and album title
-  gluefun(message = "Scraping album and artist details", color = "yellow")
-  page %>% 
-    html_nodes("title") %>% 
-    html_text(trim = TRUE) %>%
-    writeLines(con = "artist_album.txt")
-  
-  ## Download the album
-  
-  gluefun(message = "Downloading the album", color = "yellow")
   files <- system(sprintf("youtube-dl %s --get-filename", x), intern = TRUE)
   
   if (length(files) > 0) {
-    system(sprintf("youtube-dl %s", x), ignore.stderr = TRUE, ignore.stdout = TRUE)  
+    ## Create folder for the music
+    folder <- sub(".bandcamp", "", gsub("https://(*.*)\\./*.*/(.*)$", "\\1_-_\\2", x), fixed = TRUE)
+    gluefun(message = sprintf("\n\nCreating folder %s\n", folder), color = "red")
+    if (!dir.exists(folder)) dir.create(folder)
+    setwd(folder)
+    
+    ## Scrape the track list
+    gluefun(message = "Scraping track details", color = "yellow")
+    page <- read_html(x)
+    page %>% 
+      html_nodes("table.track_list") %>% 
+      html_nodes("tr") %>% 
+      html_text() %>%
+      trimws() %>%
+      gsub("\n+\\s+", ";", x = .) %>%
+      sub("^([^;]+;[^;]+).*", "\\1", x = .) %>%
+      sub("\\.", "", x = .) %>%
+      writeLines(con = sprintf("%s.ssv", folder))
+    
+    ## Scrape the artist and album title
+    gluefun(message = "Scraping album and artist details", color = "yellow")
+    page %>% 
+      html_nodes("title") %>% 
+      html_text(trim = TRUE) %>%
+      writeLines(con = "artist_album.txt")
+    
+    ## Download the album
+    
+    gluefun(message = "Downloading the album", color = "yellow")
+    
+    pb <- progress_bar$new(format = "[:bar] :current/:total (:percent)", total = length(files))
+    
+    f <- function() {
+      pb$tick(0)
+      Sys.sleep(3)
+      for (i in seq_along(files)) {
+        pb$tick(1)
+        system(sprintf("youtube-dl --playlist-items %s %s", i, x), 
+               ignore.stdout = TRUE, ignore.stderr = TRUE, wait = TRUE)
+        Sys.sleep(0.1)
+      }
+    }
+    
+    f()
     
     gluefun(message = "Modifying ID3 tags", color = "yellow")
     files <- data.table(files)
