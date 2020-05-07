@@ -37,6 +37,7 @@ if (file.exists(sprintf("%s.csv", rootFile))) {
   albums <- sort(albums)
   check <- startsWith(albums, "/")
   if (any(check)) albums[check] <- sprintf("%s%s", opt$URL, albums[check])
+  albums <- albums[!grepl("/track/", albums)]
   
   bookkeeping <- data.table(album = albums, status = FALSE)
   fwrite(bookkeeping, file = sprintf("%s.csv", rootFile))
