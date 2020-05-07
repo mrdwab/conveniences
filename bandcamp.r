@@ -73,33 +73,40 @@ lapply(albums[!bookkeeping$status], function(x) {
   ## Download the album
   
   gluefun(message = "Downloading the album", color = "yellow")
-  system(sprintf("youtube-dl %s", x), ignore.stderr = TRUE, ignore.stdout = TRUE)  
+  files <- system(sprintf("youtube-dl %s --get-filename", x), intern = TRUE)
   
-  gluefun(message = "Modifying ID3 tags", color = "yellow")
-  files <- list.files(pattern = "*.mp3")
-  files <- data.table(files)
-  files[, track_title := sub("-[0-9]+\\.mp3", "", files)][
-    , c("artist", "track_title") := transpose(stri_split_fixed(track_title, " - ", 2L))]
-  
-  album_artist <- strsplit(readLines("artist_album.txt"), " | ", fixed = TRUE)[[1]]
-  album_artist <- gsub("\"", "", album_artist)
-  
-  metadata <- readLines(con = list.files(pattern = "*ssv"))
-  if (length(metadata) == 1L) metadata <- paste0(metadata, "\n")
-  metadata <- sub("^([^;]+;[^;]+).*", "\\1", x = metadata)
-  metadata <- metadata[nzchar(metadata)]
-  metadata <- fread(text = metadata)
-  setnames(metadata, c("V1", "V2"), c("track_number", "track_title"))
-  metadata[, album := album_artist[1]][, album_artist := album_artist[2]][]
-  
-  metadata <- cbind(files[order(files)], metadata[order(track_title)])
-  metadata[, cmd := glue("mid3v2 -a ", dQuote(album_artist), 
-                         " -A ", dQuote(album),
-                         " -t ", dQuote(track_title), 
-                         " -T ", track_number, 
-                         " ", dQuote(files)), 1:nrow(metadata)]
-  metadata[, system(cmd), 1:nrow(metadata)]
-  gluefun(message = glue("Download of ", album_artist[1], " by ", album_artist[2], " complete\n\n"), color = "blue")
+  if (length(files) > 0) {
+    system(sprintf("youtube-dl %s", x), ignore.stderr = TRUE, ignore.stdout = TRUE)  
+    
+    gluefun(message = "Modifying ID3 tags", color = "yellow")
+    files <- data.table(files)
+    files[, track_title := sub("-[0-9]+\\.mp3", "", files)][
+      , c("artist", "track_title") := transpose(stri_split_fixed(track_title, " - ", 2L))]
+    
+    album_artist <- strsplit(readLines("artist_album.txt"), " | ", fixed = TRUE)[[1]]
+    album_artist <- gsub("\"", "", album_artist)
+    
+    metadata <- readLines(con = list.files(pattern = "*ssv"))
+    if (length(metadata) == 1L) metadata <- paste0(metadata, "\n")
+    metadata <- sub("^([^;]+;[^;]+).*", "\\1", x = metadata)
+    metadata <- metadata[nzchar(metadata)]
+    metadata <- fread(text = metadata)
+    setnames(metadata, c("V1", "V2"), c("track_number", "track_title"))
+    metadata[, album := album_artist[1]][, album_artist := album_artist[2]][]
+    
+    metadata <- cbind(files[order(files)], metadata[order(track_title)])
+    metadata[, cmd := glue("mid3v2 -a ", dQuote(album_artist), 
+                           " -A ", dQuote(album),
+                           " -t ", dQuote(track_title), 
+                           " -T ", track_number, 
+                           " ", dQuote(files)), 1:nrow(metadata)]
+    metadata[, system(cmd), 1:nrow(metadata)]
+    gluefun(message = glue("Download of ", album_artist[1], 
+                           " by ", album_artist[2], " complete\n\n"), 
+            color = "blue")
+  } else {
+    gluefun(message = "Nothing to download!", color = "red")
+  }
 
   bookkeeping[album %in% x, status := TRUE]
   setwd("~/Downloads/_Audio_To_Convert/")
