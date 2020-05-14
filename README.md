@@ -47,6 +47,8 @@ for printing. See how this works with `pdf2png.r`
 
 ## Other stuff
 
+* [`bandcamp.r`](/bandcamp.r): Scraper for bandcamp. Can
+scrape by label, artist, or album.
 * [`toggle_keyboard.sh`](/toggle_keyboard.sh): Turns the
 inbuilt laptop keyboard on or off. Useful when you have an 
 external keyboard plugged in and don't want cats walking 
